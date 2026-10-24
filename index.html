@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TimePad · small stamps, provable time · $TIMEPAD</title>
+<meta name="description" content="TimePad: a Zcash launchpad for time stamps. Prove a file existed at a moment in time with a zOpenTimestamps-style proof anchored on Zcash, or draw a 16×16 time stamp and trade it whole for ZEC. $TIMEPAD">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%23162A22'/%3E%3Crect x='3' y='2' width='10' height='12' fill='%23BB8130'/%3E%3Crect x='4' y='3' width='8' height='10' fill='%23162A22'/%3E%3Crect x='7' y='5' width='2' height='4' fill='%23BB8130'/%3E%3Crect x='8' y='8' width='3' height='1' fill='%23BB8130'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#162A22; --bg2:#1c3128; --panel:#2F3C29; --panel2:#384632; --line:#474E30; --edge:#eee6cf;
+  --gold:#BB8130; --gold2:#d9a352; --amber:#756A34; --brown:#474E30; --rust:#BB8130; --cream:#eee6cf; --muted:#b6ad86; --dim:#8c8a64;
+  --green:#a6c26a; --red:#d98a5a; --blue:#9ab7a0; --violet:#b8a26a; --ink:#0f1e18;
+  --px:"Silkscreen",ui-monospace,monospace; --mono:"Space Mono",ui-monospace,"SF Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--cream);font:400 15px/1.6 var(--mono);-webkit-font-smoothing:antialiased;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:24px 24px}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+canvas.pix{image-rendering:pixelated;image-rendering:crisp-edges}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px}
+/* chunky pixel buttons */
+.pb{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;font:700 13px var(--px);letter-spacing:.06em;text-transform:uppercase;color:var(--cream);background:var(--bg2);border:2px solid var(--edge);box-shadow:4px 4px 0 var(--edge);transition:transform .08s,box-shadow .08s;white-space:nowrap}
+.pb:hover{transform:translate(1px,1px);box-shadow:3px 3px 0 var(--edge)}
+.pb:active{transform:translate(4px,4px);box-shadow:0 0 0 var(--edge)}
+.pb.g{background:var(--gold);color:var(--ink);border-color:var(--cream)}
+.pb.c{background:var(--cream);color:var(--ink)}
+.pb.sm{padding:6px 10px;font-size:11px;box-shadow:3px 3px 0 var(--edge)}
+.pb.on{background:var(--gold);color:var(--ink)}
+.pb:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:4px 4px 0 var(--edge)}
+header{position:sticky;top:0;z-index:30;background:rgba(22,42,34,.96);border-bottom:2px solid var(--edge)}
+.top{display:flex;align-items:center;gap:12px;padding:12px 18px;max-width:1120px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px;font:700 18px var(--px);letter-spacing:.08em}
+.logo canvas{width:28px;height:28px}
+.top .sp{flex:1}
+.tabs{display:flex;gap:10px;padding:10px 18px 14px;max-width:1120px;margin:0 auto;overflow-x:auto}
+.tabs .pb{font-size:11px;padding:7px 11px;box-shadow:3px 3px 0 var(--edge)}
+main.wrap{padding:30px 18px 60px}
+.view{display:none}.view.on{display:block}
+.box{border:2px solid var(--edge);background:var(--panel);padding:24px;margin-bottom:22px}
+.box.flat{background:var(--bg2)}
+.eyebrow{font:700 11px var(--px);letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+h1{margin:10px 0 12px;font:700 clamp(28px,5vw,48px)/1.08 var(--px);letter-spacing:.04em;text-transform:uppercase}
+h1 .cur{display:inline-block;width:.55em;height:.9em;background:var(--dim);vertical-align:-.08em;margin-left:6px;animation:bl 1s steps(2) infinite}
+@keyframes bl{50%{opacity:0}}
+h2{margin:6px 0 10px;font:700 clamp(22px,3.4vw,32px)/1.1 var(--px);text-transform:uppercase;letter-spacing:.04em}
+h3{margin:0 0 8px;font:700 15px var(--px);text-transform:uppercase;letter-spacing:.06em}
+.lead{max-width:640px;color:#dcd5bb;margin:0 0 10px}
+.fine{font:700 11px var(--px);color:var(--dim);letter-spacing:.04em;margin:0 0 18px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+/* scene */
+.scene{border:2px solid var(--edge);margin-bottom:22px;position:relative;background:#000}
+#scene{width:100%;height:auto;display:block;aspect-ratio:760/240}
+.sky{position:absolute;right:10px;top:10px;display:flex;gap:4px}
+.sky .pb{font-size:10px;padding:4px 8px;box-shadow:2px 2px 0 var(--edge)}
+.clockchip{position:absolute;left:10px;top:10px;font:700 11px var(--px);background:rgba(15,30,24,.85);border:2px solid var(--edge);padding:4px 8px;color:var(--gold)}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat{border:2px solid var(--line);background:var(--bg2);padding:14px 16px}
+.stat span{display:block;font:700 10.5px var(--px);letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
+.stat b{display:block;margin-top:8px;font:700 22px var(--px);letter-spacing:.02em}
+.stat b.g{color:var(--gold)}
+/* stamps grid */
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.bar .t{font:700 14px var(--px);letter-spacing:.08em}
+.bar .t i{font-style:normal;color:var(--gold)}
+.bar .sp{flex:1}
+.wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px}
+.stamp{position:relative;background:var(--cream);color:var(--ink);cursor:pointer;transition:transform .12s;
+  padding:9px;-webkit-mask:radial-gradient(circle at 6px 6px,transparent 3px,#000 3.4px) -6px -6px/12px 12px,linear-gradient(#000 0 0);-webkit-mask-clip:border-box,content-box;mask:radial-gradient(circle at 6px 6px,transparent 3px,#000 3.4px) -6px -6px/12px 12px,linear-gradient(#000 0 0);mask-clip:border-box,content-box;filter:drop-shadow(0 3px 0 rgba(0,0,0,.35))}
+.stamp:hover{transform:rotate(-2deg) translateY(-3px)}
+.stamp .art{background:var(--ink);padding:6px}
+.stamp canvas{width:100%;display:block}
+.stamp .nm{display:flex;justify-content:space-between;align-items:baseline;gap:6px;margin-top:8px;font:700 10.5px var(--px)}.stamp .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stamp .nm em{font-style:normal;color:var(--rust)}
+.stamp .den{font:700 10px var(--mono);color:#474E30;margin-top:2px;display:flex;justify-content:space-between}
+.stamp .sale{position:absolute;top:13px;right:13px;background:var(--gold);color:var(--ink);font:700 9px var(--px);padding:2px 5px;border:1.5px solid var(--ink)}
+.stamp .pm{position:absolute;bottom:40px;right:12px;width:40px;height:40px;border:2px dashed rgba(117,106,52,.75);border-radius:50%;display:grid;place-items:center;font:700 7px var(--px);color:rgba(117,106,52,.9);transform:rotate(-14deg);text-align:center;line-height:1.1;background:rgba(238,230,207,.35)}
+.empty{border:2px dashed var(--line);padding:30px;text-align:center}
+.empty h3{color:var(--gold)}
+/* how */
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0}
+.how div{border:2px solid var(--line);background:var(--bg2);padding:16px}
+.how b{display:inline-grid;place-items:center;width:30px;height:30px;background:var(--gold);color:var(--ink);font:700 14px var(--px);border:2px solid var(--cream);margin-bottom:10px}
+.how p{margin:0;color:#dcd5bb}
+/* activity */
+.act{border:2px solid var(--line);background:var(--bg2)}
+.act .it{display:flex;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px dashed var(--line);font-size:13.5px}
+.act .it:last-child{border-bottom:0}
+.act .it time{font:700 10px var(--px);color:var(--dim);white-space:nowrap}
+.act .it .k{font:700 10px var(--px);padding:2px 6px;border:1.5px solid}
+.k.l{color:var(--gold)}.k.s{color:var(--green)}.k.n{color:var(--blue)}.k.b{color:var(--red)}
+.live{color:var(--green);font:700 11px var(--px)}
+/* launch */
+.lgrid{display:grid;grid-template-columns:1.1fr 1fr;gap:22px}
+.canvasbox{background:var(--brown);border:2px solid var(--edge);padding:10px}
+#paint{width:100%;aspect-ratio:1;display:block;cursor:crosshair;touch-action:none}
+.pal{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.pal button{width:30px;height:30px;border:2px solid var(--line);padding:0}
+.pal button.on{outline:3px solid var(--cream);outline-offset:1px}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+label.l{display:block;font:700 11px var(--px);letter-spacing:.1em;color:var(--muted);margin:16px 0 6px;text-transform:uppercase}
+.in{width:100%;background:var(--ink);border:2px solid var(--line);padding:10px 12px;outline:none}
+.in:focus{border-color:var(--gold)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips .pb{font-size:11px;padding:6px 10px;box-shadow:3px 3px 0 var(--edge)}
+.prevst{display:flex;gap:16px;align-items:center;background:var(--bg2);border:2px solid var(--line);padding:14px}
+.prevst .stamp{width:150px;flex:none;cursor:default}
+.prevst .stamp:hover{transform:none}
+/* notary */
+.drop{display:block;border:2px dashed var(--gold);background:rgba(187,129,48,.06);padding:30px;text-align:center;cursor:pointer;transition:background .15s}
+.drop.over{background:rgba(187,129,48,.16)}
+.drop b{display:block;font:700 15px var(--px);color:var(--gold);margin-bottom:6px}
+.hash{word-break:break-all;font:700 13px var(--mono);background:var(--ink);border:2px solid var(--line);padding:12px;color:var(--gold2)}
+.tl{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:16px 0;border:2px solid var(--line)}
+.tl div{padding:12px;border-right:2px solid var(--line);font-size:13px;opacity:.45;transition:opacity .3s}
+.tl div:last-child{border-right:0}
+.tl div.on{opacity:1}
+.tl div b{display:block;font:700 11px var(--px);color:var(--gold);margin-bottom:4px}
+.tl div.done b::after{content:" ✓";color:var(--green)}
+.proof{font:12px/1.55 var(--mono);background:var(--ink);border:2px solid var(--line);padding:12px;white-space:pre-wrap;word-break:break-all;color:#dcd5bb;max-height:260px;overflow:auto}
+/* market + portfolio */
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px dashed var(--line);font-size:13.5px}
+th{font:700 10.5px var(--px);letter-spacing:.1em;color:var(--dim);text-transform:uppercase;border-bottom:2px solid var(--line)}
+td canvas{width:34px;height:34px;vertical-align:middle;background:var(--ink);padding:2px}
+.tok{display:grid;grid-template-columns:1.2fr 1fr;gap:22px}
+.ca{display:flex;border:2px solid var(--edge);background:var(--ink)}
+.ca b{flex:1;padding:10px 12px;font:700 13px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--gold2)}
+.ca button{border:0;border-left:2px solid var(--edge);background:var(--cream);color:var(--ink);font:700 11px var(--px);padding:0 12px}
+.split{display:flex;height:40px;border:2px solid var(--edge);margin:14px 0 8px;font:700 11px var(--px)}
+.split div{display:flex;align-items:center;padding:0 10px;color:var(--ink);white-space:nowrap;overflow:hidden}
+/* modal */
+.modal{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(8,18,14,.72);padding:16px}
+.modal.on{display:flex}
+.mb{width:min(560px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel);border:2px solid var(--edge);box-shadow:8px 8px 0 var(--edge);padding:22px}
+.mb .x{float:right}
+.mstamp{display:grid;grid-template-columns:170px 1fr;gap:18px;margin-top:12px}
+.mstamp .stamp{cursor:default}.mstamp .stamp:hover{transform:none}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px}
+.kv span{color:var(--dim);font:700 10.5px var(--px);text-transform:uppercase;padding-top:3px}
+footer{border-top:2px solid var(--edge);padding:16px 18px 40px;max-width:1120px;margin:0 auto;font-size:12px;color:var(--dim)}
+footer .row{justify-content:space-between}
+footer b{font:700 12px var(--px);color:var(--cream)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);opacity:0;z-index:90;background:var(--cream);color:var(--ink);padding:10px 16px;border:2px solid var(--ink);box-shadow:4px 4px 0 var(--gold);font:700 12px var(--px);letter-spacing:.04em;transition:.25s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (max-width:860px){.stats{grid-template-columns:1fr 1fr}.how,.lgrid,.tok{grid-template-columns:1fr}.tl{grid-template-columns:1fr 1fr}.tl div:nth-child(2){border-right:0}.tl div:nth-child(-n+2){border-bottom:2px solid var(--line)}}
+@media (max-width:560px){.top .pb.g{display:none}.box{padding:16px}.mstamp{grid-template-columns:1fr}.mstamp .stamp{width:170px}.prevst{flex-direction:column;align-items:flex-start}th:nth-child(4),td:nth-child(4){display:none}.stat b{font-size:17px}.sky{top:auto;bottom:8px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><a class="logo" href="#explore"><canvas class="pix" id="logoC" width="16" height="16"></canvas>TIMEPAD</a><span class="sp"></span><a class="pb sm" id="xTop" href="https://x.com/TimePadLive" target="_blank" rel="noopener noreferrer" aria-label="TimePad on X">𝕏</a><a class="pb g sm" href="#token" id="buyTop">BUY $TIMEPAD</a><button class="pb sm" type="button" id="conn">CONNECT WALLET</button></div>
+  <nav class="tabs"><a class="pb" href="#explore" data-v="explore">EXPLORE</a><a class="pb" href="#stamp" data-v="stamp">STAMP A FILE</a><a class="pb" href="#launch" data-v="launch">LAUNCH</a><a class="pb" href="#market" data-v="market">MARKET</a><a class="pb" href="#portfolio" data-v="portfolio">PORTFOLIO</a><a class="pb" href="#token" data-v="token">$TIMEPAD</a></nav>
+</header>
+<main class="wrap">
+
+<!-- EXPLORE -->
+<section class="view" id="v-explore">
+  <div class="box">
+    <div class="eyebrow">TIMEPAD · POST OFFICE FOR PROVABLE TIME</div>
+    <h1>SMALL STAMPS. PROVABLE TIME<span class="cur"></span></h1>
+    <p class="lead">A Zcash launchpad for time stamps. Hash any file and anchor it on Zcash with a zOpenTimestamps-style proof, or draw a 16×16 time stamp, give it a ticker, and trade it whole on a ZEC market. Every stamp carries the exact block it was sealed in.</p>
+    <p class="fine">Proof of existence · Whole stamps only · Anchored on Zcash</p>
+    <div class="row"><a class="pb g" href="#stamp">STAMP A FILE</a><a class="pb g" href="#launch" style="background:var(--amber)">LAUNCH A STAMP</a><a class="pb" href="#market">OPEN MARKET</a><button class="pb c" type="button" id="randB">RANDOM STAMP</button></div>
+  </div>
+  <div class="scene"><canvas class="pix" id="scene" width="380" height="120" aria-label="Pixel scene: a clock-tower post office showing the real time, a clerk, and envelopes riding a conveyor into the tower"></canvas><span class="clockchip" id="clockChip">00:00:00</span><div class="sky" id="sky"><button class="pb sm" data-s="night" type="button">NIGHT</button><button class="pb sm" data-s="dawn" type="button">DAWN</button><button class="pb sm" data-s="day" type="button">DAY</button></div></div>
+  <div class="stats">
+    <div class="stat"><span>Time stamps issued</span><b id="stIssued">0</b></div>
+    <div class="stat"><span>ZEC price</span><b class="g" id="stZec">—</b></div>
+    <div class="stat"><span>Zcash height</span><b id="stH">—</b></div>
+    <div class="stat"><span>Files sealed</span><b id="stFiles">0</b></div>
+  </div>
+  <div class="box flat">
+    <div class="bar"><span class="t">STAMPS <i id="wallN">0</i></span><span class="sp"></span><button class="pb sm on" type="button" data-f="all">ALL</button><button class="pb sm" type="button" data-f="sale">FOR SALE</button><button class="pb sm" type="button" data-f="mine">MINE</button></div>
+    <p class="fine" style="margin-bottom:14px">Stamps are traded whole and never split. Each one records the denomination it was issued for and the moment it was sealed. Sample stamps are marked SAMPLE.</p>
+    <div class="wall" id="wall"></div>
+  </div>
+  <div class="box">
+    <h2>HOW IT WORKS</h2>
+    <p class="lead">A time stamp is a small, provable record on Zcash: one stamp, one owner, one moment.</p>
+    <div class="how">
+      <div><b>1</b><p>Drop a file or draw a 16×16 stamp. Files never leave your browser; only their SHA-256 fingerprint is used.</p></div>
+      <div><b>2</b><p>The fingerprint is batched with others into a Merkle tree, and the root is anchored on Zcash in a transparent memo, OpenTimestamps-style.</p></div>
+      <div><b>3</b><p>Keep the .zots proof to verify the moment forever, or collect and trade stamps whole, priced in ZEC.</p></div>
+    </div>
+    <div class="row"><a class="pb g" href="#stamp">STAMP A FILE</a><a class="pb" href="#market">MARKET</a></div>
+  </div>
+  <div class="box flat">
+    <div class="bar"><span class="t">ACTIVITY</span><span class="live">● LIVE</span><span class="sp"></span><span class="fine" style="margin:0">SAMPLE FEED UNTIL LAUNCH</span></div>
+    <div class="act" id="act"></div>
+  </div>
+</section>
+
+<!-- STAMP A FILE -->
+<section class="view" id="v-stamp">
+  <div class="eyebrow">NOTARY · PROOF OF EXISTENCE</div>
+  <h1>SEAL A MOMENT</h1>
+  <p class="lead">Drop any file, or paste text. TimePad fingerprints it in your browser with SHA-256 and prepares a zOpenTimestamps-style proof that it existed at this moment, anchored on Zcash.</p>
+  <p class="fine">Your file is never uploaded · Only the 32-byte hash is used</p>
+  <div class="lgrid">
+    <div class="box">
+      <h3>1 · FINGERPRINT</h3>
+      <label class="drop" id="drop"><b>DROP A FILE HERE</b>or click to choose · any type, any size<input type="file" id="file" hidden></label>
+      <label class="l" for="txt">OR PASTE TEXT</label>
+      <textarea class="in" id="txt" rows="3" placeholder="An idea, a contract, a prediction…"></textarea>
+      <div class="row" style="margin-top:12px"><button class="pb sm" type="button" id="hashTxt">HASH TEXT</button><span class="fine" id="fname" style="margin:0"></span></div>
+      <label class="l">SHA-256</label>
+      <div class="hash" id="hashOut">waiting for a file…</div>
+    </div>
+    <div class="box">
+      <h3>2 · ANCHOR ON ZCASH</h3>
+      <div class="tl" id="tl"><div data-i="0"><b>HASHED</b>in your browser</div><div data-i="1"><b>BATCHED</b>into a Merkle tree</div><div data-i="2"><b>SUBMITTED</b>root in a Zcash memo</div><div data-i="3"><b>CONFIRMED</b>block height sealed</div></div>
+      <div class="row"><button class="pb g" type="button" id="sealB" disabled>SEAL THIS MOMENT</button><button class="pb sm" type="button" id="dlB" disabled>DOWNLOAD .ZOTS</button><button class="pb sm" type="button" id="mintFromFile" disabled>MAKE IT A STAMP</button></div>
+      <label class="l">PROOF</label>
+      <div class="proof" id="proof">The proof appears here after sealing.</div>
+      <p class="fine" style="margin:12px 0 0">Preview mode: until $TIMEPAD launches, proofs are generated locally and marked PENDING, not yet anchored on-chain. Live anchoring opens at launch.</p>
+    </div>
+  </div>
+  <div class="box flat">
+    <h3>VERIFY A PROOF</h3>
+    <p class="lead" style="font-size:14px">Drop a .zots file and the original file to check the fingerprint matches.</p>
+    <div class="row"><label class="pb sm">CHOOSE .ZOTS<input type="file" id="vProof" accept=".zots,.json" hidden></label><label class="pb sm">CHOOSE ORIGINAL<input type="file" id="vFile" hidden></label><span class="fine" id="vOut" style="margin:0">—</span></div>
+  </div>
+</section>
+
+<!-- LAUNCH -->
+<section class="view" id="v-launch">
+  <div class="eyebrow">LAUNCH · NEW TIME STAMP</div>
+  <h1>ISSUE A TIME STAMP</h1>
+  <p class="lead">Draw 16×16, name it, give it a ticker and a ZEC denomination. It's sealed with the current Zcash block, and it's yours to send, hold, or sell whole.</p>
+  <div class="lgrid">
+    <div class="box">
+      <div class="bar" style="margin-bottom:10px"><span class="t">ARTWORK</span><span class="sp"></span><span class="eyebrow" id="toolName" style="color:var(--gold)">PENCIL</span></div>
+      <div class="canvasbox"><canvas class="pix" id="paint" width="16" height="16"></canvas></div>
+      <div class="pal" id="pal"></div>
+      <div class="tools"><button class="pb sm on" type="button" data-t="pencil">PENCIL</button><button class="pb sm" type="button" data-t="fill">FILL</button><button class="pb sm" type="button" data-t="eraser">ERASER</button><button class="pb sm" type="button" id="mirB">MIRROR</button><button class="pb sm" type="button" id="clockB">CLOCK</button><button class="pb sm" type="button" id="shufB">SHUFFLE</button><button class="pb sm" type="button" id="clrB">CLEAR</button></div>
+      <p class="fine" style="margin:10px 0 0">Click or drag to paint. Mirror copies the left half to the right. Clock draws a face showing the time right now.</p>
+    </div>
+    <div class="box">
+      <div class="bar"><span class="t">DETAILS</span></div>
+      <div class="prevst"><div class="stamp" id="lprev"></div><div><div class="eyebrow">WILL BE SEALED AT</div><div style="font:700 15px var(--px);color:var(--gold)" id="sealAt">—</div><div class="fine" style="margin:6px 0 0">Zcash block <span id="sealH">—</span></div></div></div>
+      <label class="l" for="nm">NAME</label><input class="in" id="nm" maxlength="20" placeholder="Midnight Seal">
+      <label class="l" for="tk">TICKER</label><input class="in" id="tk" maxlength="8" placeholder="NOON">
+      <label class="l">DENOMINATION (ZEC)</label><div class="chips" id="den"></div>
+      <label class="l">LIST FOR SALE RIGHT AWAY?</label><div class="chips" id="lst"><button class="pb on" type="button" data-l="0">HOLD</button><button class="pb" type="button" data-l="1">LIST AT DENOMINATION</button></div>
+      <div style="margin-top:20px"><button class="pb g" type="button" id="issue">ISSUE TIME STAMP</button></div>
+      <p class="fine" style="margin:12px 0 0">Preview: stamps you issue now are saved in this browser and marked PREVIEW. On-chain issuance opens when $TIMEPAD launches.</p>
+    </div>
+  </div>
+</section>
+
+<!-- MARKET -->
+<section class="view" id="v-market">
+  <div class="eyebrow">MARKET · ZEC</div>
+  <h1>THE STAMP COUNTER</h1>
+  <p class="lead">Stamps change hands whole. Prices are in ZEC and every sale is a new owner, not a fraction.</p>
+  <div class="box flat"><table><thead><tr><th>Stamp</th><th>Sealed</th><th>Price</th><th>Owner</th><th></th></tr></thead><tbody id="mkt"></tbody></table></div>
+</section>
+
+<!-- PORTFOLIO -->
+<section class="view" id="v-portfolio">
+  <div class="eyebrow">PORTFOLIO</div>
+  <h1>YOUR DRAWER</h1>
+  <p class="lead" id="pfLead">Stamps you've issued or bought, and files you've sealed in this browser.</p>
+  <div class="box flat"><div class="bar"><span class="t">STAMPS</span></div><div class="wall" id="pfWall"></div></div>
+  <div class="box flat"><div class="bar"><span class="t">SEALED FILES</span></div><table><thead><tr><th>File</th><th>SHA-256</th><th>Sealed</th><th>Status</th></tr></thead><tbody id="pfFiles"></tbody></table></div>
+</section>
+
+<!-- TOKEN -->
+<section class="view" id="v-token">
+  <div class="eyebrow">TIMEPAD · OFFICIAL TOKEN</div>
+  <h1>$TIMEPAD</h1>
+  <div class="tok">
+    <div class="box">
+      <p class="lead">$TIMEPAD is the TimePad token. Launch fees go toward anchoring time stamps on Zcash, so every holder helps keep the clock running.</p>
+      <label class="l">CONTRACT ADDRESS</label>
+      <div class="ca"><b id="caT">Posted on X at launch</b><button type="button" id="caCopy">COPY</button></div>
+      <div class="split"><div style="flex:50;background:var(--gold)">ANCHORING 50%</div><div style="flex:30;background:var(--amber)">BUYBACK 30%</div><div style="flex:20;background:var(--cream)">DEV 20%</div></div>
+      <p class="fine">Planned fee split · confirmed at launch</p>
+      <div class="row"><a class="pb g" id="buyA" href="#">BUY $TIMEPAD</a><a class="pb" id="xA" href="#" target="_blank" rel="noopener noreferrer">FOLLOW @TIMEPADLIVE</a></div>
+    </div>
+    <div class="box flat">
+      <h3>WHAT IT POWERS</h3>
+      <div class="act">
+        <div class="it"><span class="k l">SEAL</span>Anchor file fingerprints on Zcash in batched Merkle roots</div>
+        <div class="it"><span class="k s">ISSUE</span>Draw and issue 16×16 time stamps with a ZEC denomination</div>
+        <div class="it"><span class="k n">TRADE</span>Sell stamps whole on the ZEC market</div>
+        <div class="it"><span class="k b">VERIFY</span>Check any .zots proof against the chain, forever</div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer><div class="row"><b>TIMEPAD · OFFICIAL $TIMEPAD · <a href="https://x.com/TimePadLive" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">@TimePadLive</a></b><span id="caFoot">CA posted on X at launch</span></div><p>TimePad is an independent community project. It is not affiliated with the Electric Coin Company, the Zcash Foundation, or the OpenTimestamps project. Stamps, sales and activity marked SAMPLE or PREVIEW are demonstrations until $TIMEPAD launches. Nothing here is financial advice.</p></footer>
+
+<div class="modal" id="modal"><div class="mb"><button class="pb sm x" type="button" id="mx">✕</button><div class="eyebrow">TIME STAMP</div><h2 id="mName">—</h2><div class="mstamp"><div class="stamp" id="mStamp"></div><div class="kv" id="mKv"></div></div><div class="row" style="margin-top:18px" id="mAct"></div></div></div>
+<div id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+/* ================= CONFIG ================= */
+var CONFIG={
+  xUrl:'https://x.com/TimePadLive',
+  xHandle:'@TimePadLive',
+  ca:'',        // $TIMEPAD contract address
+  buyUrl:''     // where BUY $TIMEPAD should go
+};
+/* ========================================== */
+function $(s){return document.querySelector(s)}
+function $$(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+function store(k,v){try{if(v===undefined)return localStorage.getItem('tp_'+k);localStorage.setItem('tp_'+k,v)}catch(e){return null}}
+function load(k,d){try{var v=JSON.parse(store(k)||'null');return v==null?d:v}catch(e){return d}}
+var tt;function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(function(){t.classList.remove('show')},2800)}
+function srand(s){return function(){s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+function pad(n){return ('0'+n).slice(-2)}
+function fmtT(d){d=new Date(d);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())}
+
+/* ================= PALETTE + PIXEL ART ================= */
+var PAL=['#474E30','#0f1e18','#eee6cf','#BB8130','#756A34','#2F3C29','#a6c26a','#d98a5a','#9ab7a0','#b8a26a','#d9a352','#ffffff'];
+function drawArt(cv,px){var x=cv.getContext('2d');cv.width=cv.height=16;for(var i=0;i<256;i++){x.fillStyle=PAL[px[i]]||PAL[0];x.fillRect(i%16,i/16|0,1,1)}}
+function clockArt(h,m,bg,fg,face){var p=new Array(256).fill(bg==null?5:bg),R=6.5,c=7.5;for(var y=0;y<16;y++)for(var x=0;x<16;x++){var d=Math.hypot(x-c,y-c);if(d<=R+.5)p[y*16+x]=d>R-1?(fg==null?3:fg):(face==null?2:face)}
+  [[0,-1],[1,0],[0,1],[-1,0]].forEach(function(v){p[Math.round(c+v[1]*5)*16+Math.round(c+v[0]*5)]=1});
+  function hand(a,L,col){for(var t=0;t<=L;t+=.25){var X=Math.round(c+Math.sin(a)*t),Y=Math.round(c-Math.cos(a)*t);p[Y*16+X]=col}}
+  hand((h%12+m/60)/12*Math.PI*2,3.2,1);hand(m/60*Math.PI*2,5,10);p[8*16+8]=3;p[7*16+7]=3;return p}
+function hourglass(){var p=new Array(256).fill(5);for(var y=2;y<14;y++){var w=y<8?7-Math.abs(y-2)*1:7-Math.abs(13-y)*1;w=Math.max(1,y<8?(7-(y-2)):(7-(13-y)));for(var x=8-w;x<8+w;x++){p[y*16+x]=(y<8?(y>4):(y>10))?3:2}}for(var x2=3;x2<13;x2++){p[1*16+x2]=4;p[14*16+x2]=4}p[8*16+7]=3;p[8*16+8]=3;return p}
+function sunArt(){var p=new Array(256).fill(8);for(var y=0;y<16;y++)for(var x=0;x<16;x++){var d=Math.hypot(x-7.5,y-9);if(d<4.2)p[y*16+x]=3;else if(d<5.2&&(x+y)%2)p[y*16+x]=4}for(var x3=0;x3<16;x3++){p[13*16+x3]=5;p[14*16+x3]=5;p[15*16+x3]=1}return p}
+function moonArt(){var p=new Array(256).fill(1);var R=srand(4);for(var i=0;i<14;i++)p[(R()*256)|0]=2;for(var y=0;y<16;y++)for(var x=0;x<16;x++){var d=Math.hypot(x-8,y-8),d2=Math.hypot(x-10,y-6.5);if(d<5&&d2>4)p[y*16+x]=3}return p}
+function zArt(){var p=new Array(256).fill(1);for(var y=0;y<16;y++)for(var x=0;x<16;x++){var d=Math.hypot(x-7.5,y-7.5);if(d<7.2)p[y*16+x]=3}for(var x2=4;x2<12;x2++){p[4*16+x2]=1;p[11*16+x2]=1}for(var k=0;k<7;k++){p[(10-k)*16+(5+k)]=1;p[(10-k)*16+(4+k)]=1}for(var y2=2;y2<14;y2++)p[y2*16+7]=p[y2*16+7]===3&&(y2<4||y2>11)?1:p[y2*16+7];return p}
+function bellArt(){var p=new Array(256).fill(0);for(var y=3;y<12;y++){var w=Math.round(2+(y-3)*.55);for(var x=8-w;x<8+w;x++)p[y*16+x]=3}for(var x2=3;x2<13;x2++)p[12*16+x2]=4;p[13*16+7]=4;p[13*16+8]=4;p[2*16+7]=4;p[2*16+8]=4;p[5*16+6]=2;return p}
+
+/* ================= STAMP DATA ================= */
+var BASEH=3150000,BASET=Date.UTC(2026,9,24,0,0,0);
+function estHeight(t){return Math.round(BASEH+((t||Date.now())-BASET)/75000)}
+var HEIGHT=null,ZEC=null;
+var SAMPLE=[
+ {id:'s1',name:'Midnight Seal',tk:'MIDNT',den:1,art:clockArt(0,0),sale:1,price:1.4,owner:'zs1…q8m2',t:Date.UTC(2026,9,20,4,0,0)},
+ {id:'s2',name:'High Noon',tk:'NOON',den:.5,art:clockArt(12,0,8,3,2),sale:1,price:.62,owner:'t1Rk…9vA',t:Date.UTC(2026,9,21,16,0,0)},
+ {id:'s3',name:'Sand Clock',tk:'SAND',den:.1,art:hourglass(),sale:0,owner:'zs1…77fd',t:Date.UTC(2026,9,21,22,14,0)},
+ {id:'s4',name:'First Light',tk:'DAWN',den:.05,art:sunArt(),sale:1,price:.08,owner:'t1Ux…2pL',t:Date.UTC(2026,9,22,10,31,0)},
+ {id:'s5',name:'Shielded Moon',tk:'LUNA',den:5,art:moonArt(),sale:0,owner:'zs1…ab04',t:Date.UTC(2026,9,22,23,59,0)},
+ {id:'s6',name:'Golden Z',tk:'ZGOLD',den:1,art:zArt(),sale:1,price:1.1,owner:'t1Ww…0cQ',t:Date.UTC(2026,9,23,8,0,0)},
+ {id:'s7',name:'The Bell',tk:'BELL',den:.01,art:bellArt(),sale:1,price:.015,owner:'zs1…c1e9',t:Date.UTC(2026,9,23,14,30,0)},
+ {id:'s8',name:'Quarter Past',tk:'QTR',den:.1,art:clockArt(3,15,4,1,2),sale:0,owner:'t1Pa…f6T',t:Date.UTC(2026,9,23,19,15,0)}
+];
+SAMPLE.forEach(function(s){s.sample=1;s.h=estHeight(s.t)});
+var MINE=load('mine',[]),FILES=load('files',[]),WALLET=null;
+function all(){return MINE.concat(SAMPLE)}
+function stampEl(s,opts){opts=opts||{};var d=document.createElement('div');d.className='stamp';var art=document.createElement('div');art.className='art';var c=document.createElement('canvas');c.className='pix';drawArt(c,s.art);art.appendChild(c);d.appendChild(art);
+  var nm=document.createElement('div');nm.className='nm';nm.innerHTML='<span>'+esc(s.name)+'</span><em>$'+esc(s.tk)+'</em>';d.appendChild(nm);
+  var den=document.createElement('div');den.className='den';den.innerHTML='<span>'+s.den+' ZEC</span><span>#'+(s.h||'—')+'</span>';d.appendChild(den);
+  if(s.sale&&!opts.nosale){var sl=document.createElement('span');sl.className='sale';sl.textContent='FOR SALE';d.appendChild(sl)}
+  var pm=document.createElement('div');pm.className='pm';var dt=new Date(s.t);pm.innerHTML=pad(dt.getHours())+':'+pad(dt.getMinutes())+'<br>'+(s.sample?'SAMPLE':s.preview?'PREVIEW':'ZEC');d.appendChild(pm);
+  if(!opts.static)d.addEventListener('click',function(){openStamp(s)});return d}
+function esc(t){return String(t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+
+/* ================= ROUTER ================= */
+function route(){var v=(location.hash||'#explore').slice(1);if(!$('#v-'+v))v='explore';$$('.view').forEach(function(s){s.classList.toggle('on',s.id==='v-'+v)});$$('.tabs .pb').forEach(function(a){a.classList.toggle('on',a.getAttribute('data-v')===v)});if(v==='market')renderMarket();if(v==='portfolio')renderPortfolio();if(v==='launch')lprev();window.scrollTo(0,0)}
+addEventListener('hashchange',route);
+
+/* ================= EXPLORE ================= */
+var FILTER='all';
+function renderWall(){var W=$('#wall');W.innerHTML='';var list=all().filter(function(s){return FILTER==='all'||(FILTER==='sale'&&s.sale)||(FILTER==='mine'&&s.mine)});$('#wallN').textContent=list.length;$('#stIssued').textContent=all().length;$('#stFiles').textContent=FILES.length;
+  if(!list.length){W.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>'+(FILTER==='mine'?'NO STAMPS IN YOUR DRAWER YET':'NOTHING HERE YET')+'</h3><p class="fine">Draw one on the Launch tab, or seal a file and turn it into a stamp.</p><a class="pb g" href="#launch">LAUNCH A STAMP</a></div>';return}
+  list.forEach(function(s){W.appendChild(stampEl(s))})}
+$$('[data-f]').forEach(function(b){b.addEventListener('click',function(){FILTER=b.getAttribute('data-f');$$('[data-f]').forEach(function(z){z.classList.toggle('on',z===b)});renderWall()})});
+$('#randB').addEventListener('click',function(){var a=all();openStamp(a[Math.random()*a.length|0])});
+var ACT=[['l','Golden Z issued at 1 ZEC','2m'],['s','High Noon sold for 0.62 ZEC','6m'],['n','A 4.2 MB PDF was sealed in block','9m'],['l','The Bell issued at 0.01 ZEC','14m'],['b','Old Draft burned by its owner','21m'],['n','A contract.txt was sealed','33m']];
+function renderAct(){var A=$('#act');A.innerHTML='';ACT.slice(0,7).forEach(function(a){var d=document.createElement('div');d.className='it';d.innerHTML='<span class="k '+a[0]+'">'+({l:'LAUNCH',s:'SALE',n:'SEAL',b:'BURN'})[a[0]]+'</span><span style="flex:1">'+esc(a[1])+'</span><time>'+a[2]+' ago</time>';A.appendChild(d)})}
+function pushAct(k,t){ACT.unshift([k,t,'now']);renderAct()}
+
+/* ================= SCENE ================= */
+var sc=$('#scene'),sx=sc.getContext('2d'),SW=380,SH=120,SKY=store('sky')||'night',env=[],stars=[];var Rs=srand(9);for(var i=0;i<60;i++)stars.push([Rs()*SW|0,Rs()*60|0,Rs()]);
+$$('#sky .pb').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-s')===SKY);b.addEventListener('click',function(){SKY=b.getAttribute('data-s');store('sky',SKY);$$('#sky .pb').forEach(function(z){z.classList.toggle('on',z===b)})})});
+function R(x,a,b,w,h,c){x.fillStyle=c;x.fillRect(Math.round(a),Math.round(b),w,h)}
+function scene(t){var x=sx,now=new Date(),night=SKY==='night',dawn=SKY==='dawn';
+  var g=x.createLinearGradient(0,0,0,90);if(night){g.addColorStop(0,'#0f1e18');g.addColorStop(1,'#162A22')}else if(dawn){g.addColorStop(0,'#2F3C29');g.addColorStop(.6,'#BB8130');g.addColorStop(1,'#BB8130')}else{g.addColorStop(0,'#8fa98a');g.addColorStop(1,'#eee6cf')}x.fillStyle=g;x.fillRect(0,0,SW,SH);
+  if(night)stars.forEach(function(s){if(Math.sin(t*.002+s[2]*20)>-.3)R(x,s[0],s[1],1,1,s[2]>.8?'#BB8130':'#eee6cf')});
+  if(night){R(x,330,14,8,8,'#eee6cf');R(x,333,14,5,6,'#0f1e18')}else{x.fillStyle=dawn?'#d9a352':'#f0dcb0';x.beginPath();x.arc(dawn?300:320,dawn?78:22,dawn?12:9,0,7);x.fill()}
+  // far skyline
+  var sk=night?'#13241d':dawn?'#474E30':'#9a8f5a';for(var b=0;b<SW;b+=18){var h=10+((b*37)%23);R(x,b,90-h,16,h,sk)}
+  // ground
+  R(x,0,90,SW,30,night?'#2F3C29':dawn?'#474E30':'#756A34');R(x,0,90,SW,1,night?'#474E30':'#756A34');
+  // post office building
+  var bx=24,by=52;R(x,bx,by,128,38,'#474E30');R(x,bx-2,by-4,132,5,'#eee6cf');R(x,bx+6,by+4,116,3,'#0f1e18');
+  for(var w=0;w<4;w++){var wx=bx+12+w*28;R(x,wx,by+12,14,12,'#0f1e18');var lit=night||dawn;R(x,wx+1,by+13,12,10,lit?'#BB8130':'#9ab7a0');R(x,wx+6,by+13,1,10,'#0f1e18');R(x,wx+1,by+18,12,1,'#0f1e18')}
+  R(x,bx+56,by+24,12,14,'#162A22');R(x,bx+65,by+31,1,1,'#BB8130');
+  R(x,bx+30,by-14,68,10,'#0f1e18');x.fillStyle='#BB8130';x.font='bold 7px monospace';x.textAlign='center';x.fillText('TIMEPAD POST',bx+64,by-7);x.textAlign='left';
+  // clock tower
+  var tx=170,ty=12;R(x,tx,ty+14,36,64,'#2F3C29');R(x,tx-3,ty+10,42,6,'#eee6cf');R(x,tx+4,ty,28,12,'#474E30');R(x,tx+12,ty-8,12,9,'#BB8130');R(x,tx+16,ty-12,4,5,'#BB8130');
+  var cx=tx+18,cy=ty+36,cr=12;x.fillStyle='#0f1e18';x.beginPath();x.arc(cx,cy,cr+2,0,7);x.fill();x.fillStyle='#BB8130';x.beginPath();x.arc(cx,cy,cr+1,0,7);x.fill();x.fillStyle=night?'#efe2bf':'#eee6cf';x.beginPath();x.arc(cx,cy,cr-1,0,7);x.fill();
+  for(var k=0;k<12;k++){var a=k/12*Math.PI*2;R(x,cx+Math.sin(a)*(cr-3)-.5,cy-Math.cos(a)*(cr-3)-.5,1,1,'#0f1e18')}
+  var hh=now.getHours()%12+now.getMinutes()/60,mm=now.getMinutes()+now.getSeconds()/60,ss=now.getSeconds();
+  function hand(a,L,col,wd){x.strokeStyle=col;x.lineWidth=wd;x.lineCap='square';x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+Math.sin(a)*L,cy-Math.cos(a)*L);x.stroke()}
+  hand(hh/12*Math.PI*2,6,'#0f1e18',2);hand(mm/60*Math.PI*2,9,'#0f1e18',1.4);hand(ss/60*Math.PI*2,9,'#BB8130',1);R(x,cx-1,cy-1,2,2,'#BB8130');
+  // pendulum
+  var sw=Math.sin(t*.0031)*.35;x.strokeStyle='#BB8130';x.lineWidth=1;x.beginPath();x.moveTo(cx,cy+14);x.lineTo(cx+Math.sin(sw)*16,cy+14+Math.cos(sw)*16);x.stroke();x.fillStyle='#BB8130';x.beginPath();x.arc(cx+Math.sin(sw)*16,cy+14+Math.cos(sw)*16,2.5,0,7);x.fill();
+  R(x,tx+10,ty+68,16,10,'#162A22');
+  // clerk mascot
+  var mx=232,my=60+Math.round(Math.sin(t*.004)*1);R(x,mx,my,16,15,'#eee6cf');R(x,mx+3,my+5,3,3,'#0f1e18');R(x,mx+10,my+5,3,3,'#0f1e18');R(x,mx+5,my+11,6,1,'#0f1e18');R(x,mx+2,my-3,12,3,'#BB8130');R(x,mx+4,my-5,8,2,'#BB8130');R(x,mx+2,my+15,12,10,'#BB8130');R(x,mx+6,my+16,4,1,'#474E30');R(x,mx+3,my+25,4,5,'#0f1e18');R(x,mx+9,my+25,4,5,'#0f1e18');
+  // stamp in hand thumping
+  var th=(t%1400)<180;R(x,mx+16,my+(th?20:14),6,6,'#BB8130');R(x,mx+18,my+(th?17:11),2,3,'#474E30');
+  // conveyor into tower
+  var cy2=80;R(x,252,cy2,120,6,'#474E30');for(var d=0;d<120;d+=8){var off=(d-(t*.03)%8);R(x,252+((off+120)%120),cy2+2,4,1,'#eee6cf')}
+  env.forEach(function(e){e.x-=.35;if(e.x<206){e.x=380}});if(!env.length){for(var q=0;q<5;q++)env.push({x:260+q*26,c:['#eee6cf','#BB8130','#d9a352'][q%3]})}
+  env.forEach(function(e){if(e.x>370)return;R(x,e.x,cy2-6,12,7,e.c);R(x,e.x,cy2-6,12,1,'#0f1e18');x.strokeStyle='#474E30';x.lineWidth=1;x.beginPath();x.moveTo(e.x,cy2-6);x.lineTo(e.x+6,cy2-2);x.lineTo(e.x+12,cy2-6);x.stroke();R(x,e.x+8,cy2-5,3,3,'#BB8130')});
+  // block ticker
+  R(x,262,94,108,14,'#0f1e18');x.fillStyle='#BB8130';x.font='bold 8px monospace';x.fillText('BLOCK #'+(HEIGHT||estHeight()),266,104);
+  $('#clockChip').textContent=pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds())}
+var sv=true;if('IntersectionObserver' in window)new IntersectionObserver(function(e){sv=e[0].isIntersecting}).observe(sc);
+(function loop(t){if(sv&&$('#v-explore').classList.contains('on'))scene(t);requestAnimationFrame(loop)})(0);
+(function(){var x=$('#logoC').getContext('2d');var p=clockArt(10,10,1,3,2);for(var i=0;i<256;i++){x.fillStyle=PAL[p[i]];x.fillRect(i%16,i/16|0,1,1)}})();
+
+/* ================= LIVE DATA (best effort; falls back to — ) ================= */
+function fetchJSON(u){return fetch(u,{cache:'no-store'}).then(function(r){if(!r.ok)throw 0;return r.json()})}
+function live(){fetchJSON('https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd').then(function(j){ZEC=j.zcash.usd;$('#stZec').textContent='$'+ZEC.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}).catch(function(){});
+  fetchJSON('https://api.blockchair.com/zcash/stats').then(function(j){HEIGHT=j.data.best_block_height;$('#stH').textContent=HEIGHT.toLocaleString();$('#sealH').textContent=HEIGHT.toLocaleString()}).catch(function(){})}
+live();setInterval(live,60000);
+
+/* ================= NOTARY ================= */
+var CUR=null;
+function hex(buf){return Array.prototype.map.call(new Uint8Array(buf),function(b){return ('0'+b.toString(16)).slice(-2)}).join('')}
+function sha(buf){if(!(window.crypto&&crypto.subtle))return Promise.reject(new Error('no subtle'));return crypto.subtle.digest('SHA-256',buf).then(hex)}
+function setStep(n){$$('#tl div').forEach(function(d){var i=+d.getAttribute('data-i');d.classList.toggle('on',i<=n);d.classList.toggle('done',i<n||(n===3&&i===3))})}
+function gotHash(h,name,size){CUR={hash:h,name:name,size:size,t:Date.now()};$('#hashOut').textContent=h;$('#fname').textContent=name+(size!=null?' · '+fmtSize(size):'');$('#sealB').disabled=false;$('#dlB').disabled=true;$('#mintFromFile').disabled=true;$('#proof').textContent='Ready to seal.';setStep(0)}
+function fmtSize(b){return b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB'}
+function readFile(f){var r=new FileReader();r.onload=function(){sha(r.result).then(function(h){gotHash(h,f.name,f.size)}).catch(function(){toast('Your browser can’t hash files here. Try opening the site over https.')})};r.readAsArrayBuffer(f)}
+$('#file').addEventListener('change',function(){if(this.files[0])readFile(this.files[0])});
+var drop=$('#drop');['dragenter','dragover'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.add('over')})});['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('over')})});drop.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(f)readFile(f)});
+$('#hashTxt').addEventListener('click',function(){var v=$('#txt').value;if(!v.trim()){toast('Paste some text first.');return}sha(new TextEncoder().encode(v)).then(function(h){gotHash(h,'pasted text',new TextEncoder().encode(v).length)}).catch(function(){toast('Hashing needs https or localhost.')})});
+function merkle(h){var R=srand(parseInt(h.slice(0,8),16)),path=[];for(var i=0;i<4;i++){var s='';for(var k=0;k<64;k++)s+='0123456789abcdef'[R()*16|0];path.push({op:R()<.5?'prepend':'append',hash:s})}return path}
+$('#sealB').addEventListener('click',function(){if(!CUR)return;var b=this;b.disabled=true;setStep(1);var h=HEIGHT||estHeight();
+  setTimeout(function(){setStep(2)},700);setTimeout(function(){setStep(3);CUR.sealedAt=Date.now();CUR.height=h;CUR.proof={format:'zots-preview/1',status:'PENDING (preview, not yet anchored on-chain)',file:CUR.name,sha256:CUR.hash,sealed_at:new Date(CUR.sealedAt).toISOString(),zcash:{network:'mainnet',expected_block:h,memo_prefix:'ZOTS',merkle_path:merkle(CUR.hash)},verify:'Re-hash the original file with SHA-256 and compare to sha256 above.'};
+    $('#proof').textContent=JSON.stringify(CUR.proof,null,2);$('#dlB').disabled=false;$('#mintFromFile').disabled=false;b.disabled=false;FILES.unshift({name:CUR.name,hash:CUR.hash,t:CUR.sealedAt,h:h});FILES=FILES.slice(0,50);store('files',JSON.stringify(FILES));$('#stFiles').textContent=FILES.length;pushAct('n','A file was sealed (preview)');toast('Moment sealed (preview). Download your .zots proof.')},1500)});
+$('#dlB').addEventListener('click',function(){if(!CUR||!CUR.proof)return;var blob=new Blob([JSON.stringify(CUR.proof,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(CUR.name||'file').replace(/[^\w.-]+/g,'_')+'.zots';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)});
+$('#mintFromFile').addEventListener('click',function(){if(!CUR)return;var R=srand(parseInt(CUR.hash.slice(0,8),16)),p=[];for(var i=0;i<256;i++){var x=i%16,y=i/16|0,xx=x<8?x:15-x;var r=srand(parseInt(CUR.hash.slice((y*8+xx)%56,(y*8+xx)%56+8),16))();p.push(r<.45?1:r<.7?3:r<.85?4:r<.95?2:10)}ART=p;paint();$('#nm').value=(CUR.name||'Sealed').replace(/\.[^.]+$/,'').slice(0,20);$('#tk').value='SEAL';location.hash='#launch';toast('Stamp art generated from the file’s fingerprint.')});
+var vP=null,vF=null;function vCheck(){if(!vP||!vF)return;$('#vOut').textContent=vF===vP?'✓ MATCH · fingerprint is identical':'✕ NO MATCH · this is not the sealed file';$('#vOut').style.color=vF===vP?'var(--green)':'var(--red)'}
+$('#vProof').addEventListener('change',function(){var f=this.files[0];if(!f)return;f.text().then(function(t){try{vP=JSON.parse(t).sha256;$('#vOut').textContent='proof loaded…';vCheck()}catch(e){$('#vOut').textContent='Not a .zots proof'}})});
+$('#vFile').addEventListener('change',function(){var f=this.files[0];if(!f)return;f.arrayBuffer().then(sha).then(function(h){vF=h;$('#vOut').textContent='file hashed…';vCheck()}).catch(function(){$('#vOut').textContent='Could not hash file'})});
+
+/* ================= LAUNCH (pixel editor) ================= */
+var ART=new Array(256).fill(0),COL=3,TOOL='pencil',DEN=.1,LIST=0;
+var pc=$('#paint');function paint(){drawArt(pc,ART);lprev()}
+(function(){var P=$('#pal');PAL.forEach(function(c,i){var b=document.createElement('button');b.type='button';b.style.background=c;b.setAttribute('aria-label','colour '+c);if(i===COL)b.className='on';b.addEventListener('click',function(){COL=i;$$('#pal button').forEach(function(z){z.classList.toggle('on',z===b)});if(TOOL==='eraser')setTool('pencil')});P.appendChild(b)})})();
+function setTool(t){TOOL=t;$('#toolName').textContent=t.toUpperCase();$$('[data-t]').forEach(function(z){z.classList.toggle('on',z.getAttribute('data-t')===t)})}
+$$('[data-t]').forEach(function(b){b.addEventListener('click',function(){setTool(b.getAttribute('data-t'))})});
+function cell(e){var r=pc.getBoundingClientRect(),x=Math.floor((e.clientX-r.left)/r.width*16),y=Math.floor((e.clientY-r.top)/r.height*16);return x<0||y<0||x>15||y>15?-1:y*16+x}
+function fill(i,to){var from=ART[i];if(from===to)return;var st=[i];while(st.length){var k=st.pop();if(ART[k]!==from)continue;ART[k]=to;var x=k%16,y=k/16|0;if(x>0)st.push(k-1);if(x<15)st.push(k+1);if(y>0)st.push(k-16);if(y<15)st.push(k+16)}}
+var down=false;function act(e){var i=cell(e);if(i<0)return;if(TOOL==='fill')fill(i,COL);else ART[i]=TOOL==='eraser'?0:COL;paint()}
+pc.addEventListener('pointerdown',function(e){down=true;pc.setPointerCapture(e.pointerId);act(e)});pc.addEventListener('pointermove',function(e){if(down&&TOOL!=='fill')act(e)});addEventListener('pointerup',function(){down=false});
+$('#mirB').addEventListener('click',function(){for(var y=0;y<16;y++)for(var x=0;x<8;x++)ART[y*16+15-x]=ART[y*16+x];paint()});
+$('#clockB').addEventListener('click',function(){var n=new Date();ART=clockArt(n.getHours(),n.getMinutes(),0,3,2);paint()});
+$('#shufB').addEventListener('click',function(){var R=srand(Date.now()&0xffffff),c=[1,3,4,2,10,5][R()*6|0],c2=[3,2,4,8,6][R()*5|0];ART=new Array(256).fill(R()<.5?0:5);for(var y=0;y<16;y++)for(var x=0;x<8;x++){var r=R();if(r<.42){ART[y*16+x]=r<.28?c:c2;ART[y*16+15-x]=ART[y*16+x]}}paint()});
+$('#clrB').addEventListener('click',function(){ART=new Array(256).fill(0);paint()});
+(function(){var D=$('#den');[.01,.05,.1,.5,1,5].forEach(function(v){var b=document.createElement('button');b.type='button';b.className='pb'+(v===DEN?' on':'');b.textContent=v;b.addEventListener('click',function(){DEN=v;$$('#den .pb').forEach(function(z){z.classList.toggle('on',z===b)});lprev()});D.appendChild(b)})})();
+$$('#lst .pb').forEach(function(b){b.addEventListener('click',function(){LIST=+b.getAttribute('data-l');$$('#lst .pb').forEach(function(z){z.classList.toggle('on',z===b)})})});
+function draft(){return {name:$('#nm').value.trim()||'Untitled',tk:($('#tk').value.trim()||'STAMP').toUpperCase().replace(/[^A-Z0-9]/g,''),den:DEN,art:ART.slice(),t:Date.now(),h:HEIGHT||estHeight()}}
+function lprev(){var L=$('#lprev'),d=draft();var n=stampEl(Object.assign(d,{preview:1}),{static:1,nosale:1});L.innerHTML='';while(n.firstChild)L.appendChild(n.firstChild);$('#sealAt').textContent=fmtT(Date.now());$('#sealH').textContent=(HEIGHT||estHeight()).toLocaleString()}
+['#nm','#tk'].forEach(function(s){$(s).addEventListener('input',lprev)});setInterval(function(){if($('#v-launch').classList.contains('on'))lprev()},1000);
+$('#issue').addEventListener('click',function(){if(!$('#nm').value.trim()){toast('Give your stamp a name.');return}if(ART.every(function(v){return v===ART[0]})){toast('Draw something first, or hit CLOCK.');return}
+  var s=draft();s.id='m'+Date.now();s.mine=1;s.preview=1;s.owner=WALLET?short(WALLET):'you';s.sale=LIST;s.price=LIST?s.den:null;MINE.unshift(s);store('mine',JSON.stringify(MINE));renderWall();pushAct('l',s.name+' issued at '+s.den+' ZEC (preview)');toast('Time stamp issued (preview). It’s in your drawer.');location.hash='#portfolio'});
+
+/* ================= MARKET / PORTFOLIO ================= */
+function renderMarket(){var T=$('#mkt');T.innerHTML='';all().filter(function(s){return s.sale}).forEach(function(s){var tr=document.createElement('tr');var c=document.createElement('canvas');c.className='pix';drawArt(c,s.art);var td=document.createElement('td');td.appendChild(c);td.insertAdjacentHTML('beforeend',' <b>'+esc(s.name)+'</b> <span style="color:var(--rust)">$'+esc(s.tk)+'</span>'+(s.sample?' <span class="fine">SAMPLE</span>':''));tr.appendChild(td);tr.insertAdjacentHTML('beforeend','<td>'+fmtT(s.t).slice(5,16)+'</td><td style="color:var(--gold)"><b>'+s.price+' ZEC</b>'+(ZEC?' <span class="fine">≈ $'+(s.price*ZEC).toFixed(0)+'</span>':'')+'</td><td>'+esc(s.owner)+'</td>');var b=document.createElement('td');var btn=document.createElement('button');btn.className='pb sm g';btn.type='button';btn.textContent=s.mine?'YOURS':'BUY';btn.disabled=!!s.mine;btn.addEventListener('click',function(){buy(s)});b.appendChild(btn);tr.appendChild(b);T.appendChild(tr)});if(!T.children.length)T.innerHTML='<tr><td colspan="5"><div class="empty">NOTHING FOR SALE RIGHT NOW</div></td></tr>'}
+function buy(s){toast('Buying opens when $TIMEPAD launches. Stamps will trade whole for ZEC.')}
+function renderPortfolio(){var W=$('#pfWall');W.innerHTML='';var mine=all().filter(function(s){return s.mine});if(!mine.length)W.innerHTML='<div class="empty" style="grid-column:1/-1"><h3>YOUR DRAWER IS EMPTY</h3><a class="pb g" href="#launch">LAUNCH A STAMP</a></div>';mine.forEach(function(s){W.appendChild(stampEl(s))});
+  var T=$('#pfFiles');T.innerHTML='';if(!FILES.length)T.innerHTML='<tr><td colspan="4"><div class="empty">NO FILES SEALED YET · <a href="#stamp" style="color:var(--gold)">STAMP A FILE</a></div></td></tr>';FILES.forEach(function(f){T.insertAdjacentHTML('beforeend','<tr><td>'+esc(f.name)+'</td><td class="mono" style="color:var(--gold2)">'+f.hash.slice(0,10)+'…'+f.hash.slice(-6)+'</td><td>'+fmtT(f.t)+'</td><td><span class="k l" style="font:700 10px var(--px);padding:2px 6px;border:1.5px solid">PENDING</span></td></tr>')});
+  $('#pfLead').textContent=WALLET?'Connected as '+short(WALLET)+'. Stamps and files saved in this browser.':'Stamps you’ve issued and files you’ve sealed in this browser. Connect a wallet to tie them to your address at launch.'}
+
+/* ================= MODAL ================= */
+function openStamp(s){$('#mName').textContent=s.name;var M=$('#mStamp'),n2=stampEl(s,{static:1});M.innerHTML='';while(n2.firstChild)M.appendChild(n2.firstChild);
+  $('#mKv').innerHTML='<span>Ticker</span><b>$'+esc(s.tk)+'</b><span>Denomination</span><b>'+s.den+' ZEC</b><span>Sealed</span><b>'+fmtT(s.t)+'</b><span>Zcash block</span><b>#'+(s.h||'—').toLocaleString()+'</b><span>Owner</span><b>'+esc(s.owner||'you')+'</b><span>Status</span><b style="color:'+(s.sale?'var(--gold)':'var(--muted)')+'">'+(s.sale?'For sale · '+s.price+' ZEC':'Held')+'</b>'+(s.sample?'<span>Note</span><b>Sample stamp</b>':'')+(s.preview?'<span>Note</span><b>Preview · saved in this browser</b>':'');
+  var A=$('#mAct');A.innerHTML='';if(s.mine){var l=document.createElement('button');l.className='pb g';l.type='button';l.textContent=s.sale?'UNLIST':'LIST AT '+s.den+' ZEC';l.addEventListener('click',function(){s.sale=s.sale?0:1;s.price=s.sale?s.den:null;store('mine',JSON.stringify(MINE));renderWall();openStamp(s)});A.appendChild(l);var bn=document.createElement('button');bn.className='pb';bn.type='button';bn.textContent='BURN';bn.addEventListener('click',function(){MINE=MINE.filter(function(z){return z!==s});store('mine',JSON.stringify(MINE));renderWall();pushAct('b',s.name+' burned (preview)');closeM();if(location.hash==='#portfolio')renderPortfolio()});A.appendChild(bn)}
+  else if(s.sale){var b=document.createElement('button');b.className='pb g';b.type='button';b.textContent='BUY FOR '+s.price+' ZEC';b.addEventListener('click',function(){buy(s)});A.appendChild(b)}
+  $('#modal').classList.add('on')}
+function closeM(){$('#modal').classList.remove('on')}
+$('#mx').addEventListener('click',closeM);$('#modal').addEventListener('click',function(e){if(e.target===this)closeM()});addEventListener('keydown',function(e){if(e.key==='Escape')closeM()});
+
+/* ================= WALLET + LINKS ================= */
+function short(a){return a.slice(0,4)+'…'+a.slice(-4)}
+$('#conn').addEventListener('click',function(){var p=(window.phantom&&window.phantom.solana)||window.solana||window.solflare||(window.backpack&&window.backpack.solana);if(!p){toast('No wallet found. You can keep using TimePad as a guest.');return}p.connect().then(function(r){WALLET=((r&&r.publicKey)||p.publicKey).toString();$('#conn').textContent=short(WALLET);$('#conn').classList.add('on');toast('Connected (read-only).')}).catch(function(){toast('Connection cancelled.')})});
+function wire(a,url,msg){if(!a)return;if(url){a.href=url;a.target='_blank';a.rel='noopener noreferrer'}else{a.removeAttribute('target');a.addEventListener('click',function(e){e.preventDefault();toast(msg)})}}
+wire($('#xA'),CONFIG.xUrl,'Our X drops soon. The launch is posted there.');wire($('#buyA'),CONFIG.buyUrl,'$TIMEPAD launches soon. The contract address is posted on X.');
+if(CONFIG.buyUrl){$('#buyTop').href=CONFIG.buyUrl;$('#buyTop').target='_blank'}
+if(CONFIG.ca){$('#caT').textContent=CONFIG.ca;$('#caFoot').textContent=CONFIG.ca}
+$('#caCopy').addEventListener('click',function(){if(!CONFIG.ca){toast('Not posted yet. Watch our X.');return}try{navigator.clipboard.writeText(CONFIG.ca);toast('Copied')}catch(e){toast(CONFIG.ca)}});
+
+ART=clockArt(10,10,0,3,2);drawArt(pc,ART);renderWall();renderAct();route();
+setInterval(function(){var k=[['s','Golden Z changed hands for 1.1 ZEC'],['n','A photo was sealed'],['l','Quarter Past re-listed'],['n','A spreadsheet was sealed']][Math.random()*4|0];pushAct(k[0],k[1])},25000);
+})();
+</script>
+</body>
+</html>
